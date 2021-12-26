@@ -1,0 +1,67 @@
+service: serverlessproject
+provider:
+  name: aws
+  runtime: nodejs12.x
+  profile: YOUR-AWS-ROLE-PROFILE
+  httpApi:
+    cors: true
+  region: us-east-1
+  environment:
+    tableName: ${self:custom.tableName}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:*
+      Resource: '*'
+
+plugins:
+  - serverless-s3-sync
+  - serverless-webpack
+
+package:
+  individually: true
+
+custom:
+  tableName: player-points
+  s3Sync:
+    - bucketName: just-a-basic-bucket
+      localDir: UploadData
+
+functions:
+    getUser:
+      handler: lambdas/endpoints/getUser.handler
+      events:
+        - httpApi:
+            path: /get-user/{ID}
+            method: GET
+    getPlayerScore:
+      handler: lambdas/endpoints/getPlayerScore.handler
+      events:
+        - httpApi:
+            path: /get-player-score/{ID}
+            method: GET
+
+    createPlayerScore:
+      handler: lambdas/endpoints/createPlayerScore.handler
+      events:
+        - httpApi:
+            path: /create-player-score
+            method: POST
+
+resources:
+  Resources:
+    DemoBucketUpload:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: just-a-basic-bucket
+    MyDynamoDBTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.tableName}
+        AttributeDefinitions:
+          - AttributeName: ID
+            AttributeType: S
+        KeySchema:
+          - AttributeName: ID
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
